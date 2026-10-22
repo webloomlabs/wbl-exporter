@@ -1,0 +1,16 @@
+{
+  "name": "wbl-exporter",
+  "version": "1.0.0",
+  "description": "Bulk-download Shopify product images by collection, with no 100-image cap",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22.6" },
+  "scripts": {
+    "export": "node --experimental-strip-types --no-warnings scripts/export-images.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
