@@ -7,15 +7,16 @@ Requires Node.js 22.6+. Dev dependencies (`typescript`, `@types/node`) are only 
 ## Usage
 
 ```bash
-npm run export -- --collections citrus-collection,bulk-garnish-supplies
-npm run export -- --collections all --out ./images
-npm run export -- --store https://example.com --collections some-handle
+npm run export -- --store https://example.com --collections summer-sale,new-arrivals
+npm run export -- --store https://example.com --collections all --out ./images
+npm run export -- --store https://example.com --collections some-handle --countries US,LK
 npm run export -- --csv ./products_export.csv
 ```
 
 | Flag | Meaning |
 | --- | --- |
-| `--store` | Store base URL (default `https://garnishme.store`) |
+| `--store` | Store base URL (required unless `--csv`) |
+| `--countries` | Comma-separated country codes; products are merged across them (see Markets below) |
 | `--collections` | Comma-separated collection handles (required unless `--csv`). `all` uses `/products.json` |
 | `--out` | Output directory (default `./images`) |
 | `--csv` | Shopify `products_export.csv` to use instead of the live store |
@@ -41,3 +42,7 @@ The Shopify product export has no collection column, so all files go to `{out}/c
 ## Notes
 
 Collections that exist but are not published to the Online Store sales channel return no products from the public endpoint; the tool warns when that happens.
+
+## Markets
+
+Stores using Shopify Markets can show a different product set per country, so a collection may look smaller from one location. Pass `--countries US,GB,LK` to fetch each market and merge the results by product handle.

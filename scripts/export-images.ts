@@ -163,11 +163,11 @@ function productsFromCsv(text: string): Product[] {
 
 // ---------- Live ----------
 
-async function fetchCollectionProducts(store: string, collection: string): Promise<Product[]> {
+async function fetchCollectionProducts(store: string, collection: string, country?: string): Promise<Product[]> {
   const base = collection === 'all' ? `${store}/products.json` : `${store}/collections/${encodeURIComponent(collection)}/products.json`;
   const all: Product[] = [];
   for (let page = 1; ; page++) {
-    const res = await fetchRetry(`${base}?limit=250&page=${page}`, { headers: { accept: 'application/json' } });
+    const res = await fetchRetry(`${base}?limit=250&page=${page}${country ? `&country=${encodeURIComponent(country)}` : ""}`, { headers: { accept: 'application/json' } });
     const { products } = (await res.json()) as { products: Product[] };
     if (!products.length) break;
     all.push(...products);
@@ -195,19 +195,21 @@ async function download(job: Job): Promise<Status> {
 async function main() {
   const { values } = parseArgs({
     options: {
-      store: { type: 'string', default: 'https://garnishme.store' },
+      store: { type: 'string' },
       collections: { type: 'string' },
       out: { type: 'string', default: './images' },
       csv: { type: 'string' },
+      countries: { type: 'string' },
     },
   });
-  const store = values.store!.replace(/\/+$/, '');
+  const store = (values.store ?? '').replace(/\/+$/, '');
   const out = values.out!;
-  if (!values.collections && !values.csv) {
-    console.error('Usage: export-images.ts --collections a,b|all [--store URL] [--out DIR] [--csv products_export.csv]');
+  if (!values.csv && (!values.collections || !store)) {
+    console.error('Usage: export-images.ts --store URL --collections a,b|all [--out DIR] [--countries US,GB] | --csv products_export.csv');
     process.exit(2);
   }
 
+  const countries = (values.countries ?? '').split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
   const names = new NameAllocator();
   const jobs: Job[] = [];
   let productCount = 0;
@@ -231,7 +233,12 @@ async function main() {
     addProducts('csv-export', 'csv-export', productsFromCsv(await readFile(values.csv, 'utf8')));
   } else {
     for (const c of values.collections!.split(',').map((s) => s.trim()).filter(Boolean)) {
-      const products = await fetchCollectionProducts(store, c);
+      // Shopify Markets can show different products per country, so merge across them by handle
+      const byHandle = new Map<string, Product>();
+      for (const country of countries.length ? countries : [undefined]) {
+        for (const p of await fetchCollectionProducts(store, c, country)) if (!byHandle.has(p.handle)) byHandle.set(p.handle, p);
+      }
+      const products = [...byHandle.values()];
       console.log(`${c}: ${products.length} products`);
       if (!products.length) console.warn(`warning: collection "${c}" returned no products (wrong handle, empty, or not published to the online store?)`);
       addProducts(c, c, products);
